@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Thử Thách Nút Bấm Vô Lý Đỉnh Cao</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --purple: #2B1055;
+    --purple-deep: #1A0A36;
+    --pink: #FF3E9A;
+    --yellow: #FFD23F;
+    --sky: #3EC6FF;
+    --green: #6BCB4F;
+    --white: #FFFDF7;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: radial-gradient(circle at 30% 20%, #3a1a6e, var(--purple-deep) 70%);
+    font-family: 'Fredoka', 'Baloo 2', sans-serif;
+    color: var(--white);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  #stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.15s ease;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  #stage.shake { animation: shake 0.4s; }
+  @keyframes shake {
+    0%,100% { transform: translate(0,0) rotate(0deg); }
+    20% { transform: translate(-6px, 4px) rotate(-1deg); }
+    40% { transform: translate(6px, -4px) rotate(1deg); }
+    60% { transform: translate(-4px, -6px) rotate(-1deg); }
+    80% { transform: translate(4px, 6px) rotate(1deg); }
+  }
+
+  #stage.flip { animation: flipit 0.6s; }
+  @keyframes flipit {
+    0% { transform: rotate(0deg); }
+    50% { transform: rotate(180deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    text-align: center;
+    padding: 18px 12px 8px;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(20px, 4.2vw, 38px);
+    color: var(--yellow);
+    text-shadow: 3px 3px 0 var(--pink), -1px -1px 0 var(--purple-deep);
+    letter-spacing: 1px;
+  }
+
+  #subtitle {
+    margin-top: 6px;
+    font-size: clamp(12px, 2vw, 16px);
+    color: var(--sky);
+    opacity: 0.9;
+  }
+
+  #hud {
+    position: absolute;
+    top: 96px; left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    z-index: 5;
+    pointer-events: none;
+    flex-wrap: wrap;
+    padding: 0 12px;
+  }
+
+  .stat {
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 14px;
+    padding: 8px 16px;
+    min-width: 130px;
+    text-align: center;
+  }
+
+  .stat .label { font-size: 11px; color: var(--green); }
+  .stat .value { font-size: 20px; color: var(--white); }
+
+  #bubble {
+    position: absolute;
+    z-index: 8;
+    background: var(--white);
+    color: var(--purple-deep);
+    padding: 8px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    max-width: 230px;
+    text-align: center;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    pointer-events: none;
+    transition: top 0.15s ease, left 0.15s ease;
+    opacity: 0;
+  }
+  #bubble::after {
+    content: "";
+    position: absolute;
+    bottom: -10px; left: 50%;
+    transform: translateX(-50%);
+    border-width: 10px 8px 0 8px;
+    border-style: solid;
+    border-color: var(--white) transparent transparent transparent;
+  }
+  #bubble.show { opacity: 1; }
+
+  .target {
+    position: absolute;
+    z-index: 10;
+    padding: 16px 26px;
+    border: none;
+    border-radius: 50px;
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--purple-deep);
+    background: var(--yellow);
+    box-shadow: 0 6px 0 #c99a00;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: top 0.12s cubic-bezier(.34,1.56,.64,1), left 0.12s cubic-bezier(.34,1.56,.64,1), font-size 0.15s, padding 0.15s, transform 0.12s;
+  }
+  .target:active { transform: scale(0.94); }
+
+  .decoy {
+    background: var(--sky);
+    box-shadow: 0 6px 0 #1c86ab;
+    color: #06263a;
+  }
+
+  .float-text {
+    position: absolute;
+    z-index: 20;
+    font-size: 18px;
+    font-weight: bold;
+    pointer-events: none;
+    animation: floatUp 1.1s ease-out forwards;
+    white-space: nowrap;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-60px) scale(1.3); }
+  }
+
+  .confetti {
+    position: absolute;
+    top: -20px;
+    z-index: 30;
+    border-radius: 2px;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0.3; }
+  }
+
+  #winScreen {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 5, 45, 0.92);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+  }
+  #winScreen.show { display: flex; }
+
+  #winScreen h2 {
+    font-size: clamp(22px, 5vw, 42px);
+    color: var(--pink);
+    text-shadow: 3px 3px 0 var(--yellow);
+    margin-bottom: 6px;
+  }
+  #winScreen p {
+    font-size: 15px;
+    color: var(--white);
+    max-width: 500px;
+    line-height: 1.6;
+  }
+  #restartBtn {
+    margin-top: 22px;
+    padding: 14px 32px;
+    font-size: 17px;
+    font-family: inherit;
+    font-weight: bold;
+    color: var(--purple-deep);
+    background: var(--green);
+    border: none;
+    border-radius: 50px;
+    box-shadow: 0 6px 0 #3c8a26;
+    cursor: pointer;
+  }
+  #restartBtn:active { transform: translateY(4px); box-shadow: 0 2px 0 #3c8a26; }
+
+  #footer-tip {
+    position: absolute;
+    bottom: 10px; left: 0; right: 0;
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    z-index: 5;
+    pointer-events: none;
+    padding: 0 10px;
+  }
+
+  /* --- TV & điều hòa: đồ vật gây nhiễu --- */
+  #flashOverlay {
+    position: fixed;
+    inset: 0;
+    background: #ffffff;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 60;
+  }
+  #flashOverlay.flash { animation: flickerFlash 0.5s steps(2, end); }
+  @keyframes flickerFlash {
+    0%, 100% { opacity: 0; }
+    20% { opacity: 0.55; }
+    40% { opacity: 0; }
+    60% { opacity: 0.35; }
+    80% { opacity: 0; }
+  }
+
+  .tv-prop {
+    position: absolute;
+    top: 96px; left: 14px;
+    z-index: 6;
+    text-align: center;
+    pointer-events: none;
+  }
+  .tv-screen {
+    width: 64px; height: 42px;
+    background: #0b0b1a;
+    border: 4px solid #4a4560;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 10px rgba(62,198,255,0.15);
+  }
+  .tv-screen.tv-flicker {
+    animation: tvStatic 0.5s steps(3, end);
+  }
+  @keyframes tvStatic {
+    0% { background: #0b0b1a; filter: brightness(1); }
+    25% { background: #3EC6FF; filter: brightness(2); }
+    50% { background: #FF3E9A; filter: brightness(1.6); }
+    75% { background: #0b0b1a; filter: brightness(1); }
+    100% { background: #0b0b1a; filter: brightness(1); }
+  }
+  .tv-stand {
+    width: 22px; height: 8px;
+    background: #4a4560;
+    margin: 0 auto;
+    border-radius: 0 0 4px 4px;
+  }
+
+  .ac-prop {
+    position: absolute;
+    top: 96px; right: 14px;
+    z-index: 6;
+    pointer-events: none;
+  }
+  .ac-body {
+    width: 82px; height: 32px;
+    background: #eef6ff;
+    border: 2px solid #bcd4e6;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.15);
+    transition: box-shadow 0.2s;
+  }
+  .ac-body.ac-blast { box-shadow: 0 3px 0 rgba(0,0,0,0.15), 0 0 14px rgba(62,198,255,0.7); }
+  .ac-fan {
+    font-size: 17px;
+    animation: spinFan 3s linear infinite;
+    display: inline-block;
+  }
+  .ac-fan.ac-blast { animation-duration: 0.4s; }
+  @keyframes spinFan { to { transform: rotate(360deg); } }
+
+  .wind-streak {
+    position: absolute;
+    left: -12%;
+    width: 90px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent);
+    z-index: 25;
+    pointer-events: none;
+    animation: windBlow linear forwards;
+  }
+  @keyframes windBlow {
+    to { transform: translateX(130vw); }
+  }
+
+  .windy {
+    animation: windSway 0.55s ease-in-out infinite;
+  }
+  @keyframes windSway {
+    0% { transform: translateX(0) rotate(0deg); }
+    25% { transform: translateX(9px) rotate(4deg); }
+    50% { transform: translateX(-7px) rotate(-3deg); }
+    75% { transform: translateX(5px) rotate(2deg); }
+    100% { transform: translateX(0) rotate(0deg); }
+  }
+
+  @media (max-width: 480px) {
+    .tv-prop, .ac-prop { top: 200px; }
+    .tv-screen { width: 46px; height: 30px; font-size: 13px; }
+    .ac-body { width: 60px; height: 24px; }
+    .ac-fan { font-size: 13px; }
+  }
+
+  @media (max-width: 480px) {
+    header { padding: 12px 8px 6px; }
+    #hud { top: 78px; gap: 10px; }
+    .stat { min-width: 96px; padding: 6px 10px; }
+    .stat .label { font-size: 10px; }
+    .stat .value { font-size: 17px; }
+    .target { padding: 14px 20px; font-size: 16px; }
+    #footer-tip { font-size: 10px; }
+  }
+
+  @media (max-height: 560px) {
+    #hud { top: 70px; }
+    header { padding: 8px 8px 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <header>
+    <h1>🎯 Thử Thách Nút Bấm Vô Lý Đỉnh Cao</h1>
+    <div id="subtitle">Tương truyền, chỉ ai có tâm lý vững vàng nhất mới bắt được nó…</div>
+  </header>
+
+  <div id="hud">
+    <div class="stat"><div class="label">Điểm Vô Lý</div><div class="value" id="scoreVal">0</div></div>
+    <div class="stat"><div class="label">Số Lần Hụt</div><div class="value" id="missVal">0</div></div>
+    <div class="stat"><div class="label">Thời Gian Lãng Phí</div><div class="value" id="timeVal">0 giây</div></div>
+  </div>
+
+  <div id="bubble"></div>
+
+  <div class="tv-prop" id="tvProp">
+    <div class="tv-screen" id="tvScreen">📶</div>
+    <div class="tv-stand"></div>
+  </div>
+
+  <div class="ac-prop" id="acProp">
+    <div class="ac-body" id="acBody"><span class="ac-fan" id="acFan">🌀</span></div>
+  </div>
+
+  <div id="flashOverlay"></div>
+
+  <div id="winScreen">
+    <h2 id="winTitle"></h2>
+    <p id="winDesc"></p>
+    <button id="restartBtn">Chơi lại, tôi không phục</button>
+  </div>
+
+  <div id="footer-tip">Mẹo: khi bạn đến gần, nó có thể sẽ hoảng… mà cũng có thể không</div>
+</div>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const bubble = document.getElementById('bubble');
+  const scoreVal = document.getElementById('scoreVal');
+  const missVal = document.getElementById('missVal');
+  const timeVal = document.getElementById('timeVal');
+  const winScreen = document.getElementById('winScreen');
+  const winTitle = document.getElementById('winTitle');
+  const winDesc = document.getElementById('winDesc');
+  const restartBtn = document.getElementById('restartBtn');
+  const tvScreen = document.getElementById('tvScreen');
+  const acBody = document.getElementById('acBody');
+  const acFan = document.getElementById('acFan');
+  const flashOverlay = document.getElementById('flashOverlay');
+
+  let score = 0;
+  let misses = 0;
+  let catches = 0;
+  let dodgeCount = 0;
+  let won = false;
+  const CATCH_TARGET = 5;
+  const startTime = Date.now();
+
+  const taunts = [
+    "Không bắt được tôi đâu nhé? Hihi~",
+    "Tay bạn chậm vậy, có bị trễ mạng không đấy?",
+    "Lại gần thêm chút nữa đi, tôi hứa sẽ không chạy (xạo đấy)",
+    "Nghe đồn ai bấm trúng tôi sẽ có cuộc sống kỳ diệu",
+    "Lại gặp nhau rồi, mà bạn vẫn chưa bấm trúng",
+    "Đừng đuổi nữa, mệt lắm không đấy",
+    "Cảnh báo: nút này đã mua bảo hiểm tai nạn hạng cao",
+    "Tôi không chạy trốn, tôi đang tập thể dục đấy",
+    "Chuột của bạn đang vẽ vòng tròn tại chỗ kìa",
+    "Lúc này, cả vũ trụ đang cổ vũ cho bạn (không có đâu)",
+    "Bình tĩnh, hít thở sâu, rồi tiếp tục thất bại nhé",
+    "Hôm nay tôi vui, nhưng vẫn sẽ không để bạn bấm trúng",
+    "Khoa học đã chứng minh: không đuổi kịp tôi là chuyện bình thường",
+    "Đừng nản, AI hàng xóm cũng chưa bấm trúng tôi đâu",
+    "Bạn vừa bị tôi troll đấy",
+  ];
+
+  const catchPhrases = [
+    "Không ngờ bạn lại bắt được tôi?!",
+    "Cái gì? Vô lý quá đi!",
+    "Coi như bạn may mắn, lần sau không dễ vậy đâu",
+    "Được rồi được rồi, lần này bạn thắng",
+    "Lần này tôi hơi lơ là",
+  ];
+
+  const decoyPhrases = [
+    "Haha, tôi là thế thân thôi",
+    "Đồ giả đấy! Đây chỉ là mồi nhử",
+    "Bạn bị lừa rồi~",
+    "Đòn đánh thế thân! Trừ điểm!",
+    "Cái này không phải hàng thật đâu",
+  ];
+
+  const winTitles = [
+    "Chúc mừng đạt thành tựu: Cao Thủ Mò Trăng Đáy Biển",
+    "Chúc mừng đạt thành tựu: Kẻ Kết Liễu Nút Bấm Của Schrödinger",
+    "Chúc mừng đạt thành tựu: Đỉnh Cao Tốc Độ Tay Loài Người (chưa chắc)",
+    "Chúc mừng đạt thành tựu: Tuyển Thủ Tràn Điểm Vô Lý",
+    "Chúc mừng đạt thành tựu: Khắc Tinh Của Chính Khắc Tinh Nút Bấm",
+  ];
+
+  const winDescs = [
+    "Theo giám định của chuyên gia, may mắn của bạn hôm nay đã bị tiêu hết đến tận quý sau. Hãy sắp xếp phần may mắn còn lại một cách hợp lý.",
+    "Hệ thống phát hiện bạn đã lãng phí rất nhiều thời gian quý báu của cuộc đời, nhưng có vẻ bạn vẫn khá vui, điều đó mới quan trọng.",
+    "Thử thách này không có ý nghĩa thực tế gì cả, nhưng chúc mừng bạn đã kiên trì đến phút cuối, rất đúng chất bạn.",
+    "Theo phân tích dữ liệu lớn, người kiên trì bấm hết trò chơi này thường cũng kiên trì bấm rất nhiều thứ vô ích khác.",
+    "Thông báo chính thức: thành tựu này không đổi được phần thưởng nào cả, thuần túy là tổn thất tinh thần.",
+  ];
+
+  function rand(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+  function pick(arr){ return arr[rand(0, arr.length-1)]; }
+
+  function updateHUD(){
+    scoreVal.textContent = score;
+    missVal.textContent = misses;
+    const secs = Math.floor((Date.now()-startTime)/1000);
+    timeVal.textContent = secs + " giây";
+  }
+  setInterval(updateHUD, 1000);
+
+  function floatText(x, y, text, color){
+    const el = document.createElement('div');
+    el.className = 'float-text';
+    el.textContent = text;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.color = color || '#FFD23F';
+    stage.appendChild(el);
+    setTimeout(()=> el.remove(), 1100);
+  }
+
+  function shakeScreen(){
+    stage.classList.remove('shake');
+    void stage.offsetWidth;
+    stage.classList.add('shake');
+  }
+
+  function flipScreen(){
+    stage.classList.remove('flip');
+    void stage.offsetWidth;
+    stage.classList.add('flip');
+  }
+
+  function confettiBurst(){
+    const colors = ['#FF3E9A','#FFD23F','#3EC6FF','#6BCB4F'];
+    for(let i=0;i<40;i++){
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      const size = rand(6,12);
+      c.style.width = size+'px';
+      c.style.height = size+'px';
+      c.style.left = rand(0,100)+'vw';
+      c.style.background = pick(colors);
+      c.style.animationDuration = rand(1600,3200)+'ms';
+      stage.appendChild(c);
+      setTimeout(()=> c.remove(), 3300);
+    }
+  }
+
+  // --- TV & điều hòa: các loại nhiễu ngẫu nhiên ---
+  const tvCaptions = ["Mất tín hiệu!", "Hình bị nhiễu rồi", "Ai vừa đổi kênh vậy"];
+
+  function triggerTvFlicker(){
+    if (won) return;
+    tvScreen.classList.remove('tv-flicker');
+    void tvScreen.offsetWidth;
+    tvScreen.classList.add('tv-flicker');
+    flashOverlay.classList.remove('flash');
+    void flashOverlay.offsetWidth;
+    flashOverlay.classList.add('flash');
+    const rect = tvScreen.getBoundingClientRect();
+    floatText(rect.left, rect.top - 6, pick(tvCaptions), '#3EC6FF');
+    setTimeout(()=>{
+      tvScreen.classList.remove('tv-flicker');
+      flashOverlay.classList.remove('flash');
+    }, 520);
+  }
+
+  function spawnWindStreaks(){
+    for (let i=0; i<6; i++){
+      const s = document.createElement('div');
+      s.className = 'wind-streak';
+      s.style.top = rand(60, Math.max(window.innerHeight-60, 80)) + 'px';
+      s.style.animationDelay = (i*80) + 'ms';
+      s.style.animationDuration = rand(900,1400) + 'ms';
+      stage.appendChild(s);
+      setTimeout(()=> s.remove(), 1800);
+    }
+  }
+
+  function triggerWindGust(){
+    if (won) return;
+    acBody.classList.add('ac-blast');
+    acFan.classList.add('ac-blast');
+    spawnWindStreaks();
+    document.querySelectorAll('.target, .decoy').forEach(function(el){
+      el.classList.add('windy');
+      setTimeout(()=> el.classList.remove('windy'), 1700);
+    });
+    setTimeout(()=>{
+      acBody.classList.remove('ac-blast');
+      acFan.classList.remove('ac-blast');
+    }, 1700);
+  }
+
+  function scheduleTv(){
+    setTimeout(function(){ triggerTvFlicker(); scheduleTv(); }, rand(6000, 11000));
+  }
+
+  function scheduleWind(){
+    setTimeout(function(){ triggerWindGust(); scheduleWind(); }, rand(7000, 12000));
+  }
+
+  function safePos(){
+    const narrow = window.innerWidth < 480;
+    const margin = narrow ? 60 : 90;
+    const topOffset = narrow ? 140 : 170;
+    const bottomBuffer = narrow ? 170 : 220;
+    const w = window.innerWidth - margin*2;
+    const h = window.innerHeight - bottomBuffer;
+    return {
+      x: margin + rand(0, Math.max(w,10)),
+      y: topOffset + rand(0, Math.max(h,10))
+    };
+  }
+
+  function placeBubble(x, y, text){
+    bubble.textContent = text;
+    bubble.style.left = (x - 30) + 'px';
+    bubble.style.top = (y - 46) + 'px';
+    bubble.classList.add('show');
+    clearTimeout(placeBubble._t);
+    placeBubble._t = setTimeout(()=> bubble.classList.remove('show'), 1400);
+  }
+
+  function applyDifficulty(el){
+    // Nút sẽ nhỏ dần và nhanh dần theo số lần bạn hụt tay
+    const shrink = Math.max(1 - dodgeCount * 0.02, 0.5);
+    el.style.fontSize = Math.round(18 * shrink) + 'px';
+    el.style.padding = Math.round(14 * shrink) + 'px ' + Math.round(24 * shrink) + 'px';
+  }
+
+  let target;
+
+  function spawnTarget(){
+    if (target) target.remove();
+    target = document.createElement('button');
+    target.className = 'target';
+    target.textContent = catches === 0 ? 'Bấm thử tôi xem' : ('Thử lại (' + catches + '/' + CATCH_TARGET + ')');
+    const pos = safePos();
+    target.style.left = pos.x + 'px';
+    target.style.top = pos.y + 'px';
+    applyDifficulty(target);
+    stage.appendChild(target);
+
+    function dodge(){
+      if (won) return;
+      dodgeCount++;
+      misses++;
+      score += rand(-8, 26);
+      updateHUD();
+
+      const p = safePos();
+      target.style.left = p.x + 'px';
+      target.style.top = p.y + 'px';
+      applyDifficulty(target);
+      placeBubble(p.x, p.y, pick(taunts));
+
+      if (dodgeCount % 4 === 0) shakeScreen();
+      if (dodgeCount % 7 === 0) flipScreen();
+      if (dodgeCount % 3 === 0 && Math.random() < 0.75) spawnDecoy();
+      if (dodgeCount > 10 && dodgeCount % 5 === 0 && Math.random() < 0.5) spawnDecoy();
+    }
+
+    target.addEventListener('mouseenter', function(){
+      if (won) return;
+      // Xác suất bắt được tăng dần theo số lần hụt (chậm hơn để khó hơn)
+      const catchChance = Math.min(0.05 + dodgeCount * 0.015, 0.4);
+      if (Math.random() < catchChance) {
+        // Không né, cho bạn cơ hội bấm trúng
+        return;
+      }
+      dodge();
+    });
+
+    target.addEventListener('click', function(e){
+      if (won) return;
+      catches++;
+      score += rand(50, 200);
+      floatText(e.clientX, e.clientY, pick(catchPhrases), '#6BCB4F');
+      confettiBurst();
+      updateHUD();
+      if (catches >= CATCH_TARGET) {
+        showWin();
+      } else {
+        spawnTarget();
+      }
+    });
+
+    // Hỗ trợ cảm ứng: chạm vào cũng có thể bị né
+    target.addEventListener('touchstart', function(ev){
+      if (won) return;
+      const catchChance = Math.min(0.1 + dodgeCount * 0.02, 0.45);
+      if (Math.random() < catchChance) return;
+      ev.preventDefault();
+      dodge();
+    }, {passive:false});
+  }
+
+  function spawnDecoy(){
+    const decoy = document.createElement('button');
+    decoy.className = 'target decoy';
+    decoy.textContent = pick(['Tôi mới là thật!', 'Bấm tôi nhanh', 'Cảnh báo mồi nhử', 'Thật hay giả đây?']);
+    const p = safePos();
+    decoy.style.left = p.x + 'px';
+    decoy.style.top = p.y + 'px';
+    stage.appendChild(decoy);
+    decoy.addEventListener('click', function(e){
+      score -= rand(10, 50);
+      updateHUD();
+      floatText(e.clientX, e.clientY, pick(decoyPhrases), '#FF3E9A');
+      decoy.remove();
+    });
+    setTimeout(()=> { if (decoy.parentNode) decoy.remove(); }, 1800);
+  }
+
+  function showWin(){
+    won = true;
+    if (target) target.remove();
+    winTitle.textContent = pick(winTitles);
+    winDesc.textContent = pick(winDescs) + ' Điểm vô lý cuối cùng: ' + score + ', hụt tay ' + misses + ' lần.';
+    winScreen.classList.add('show');
+    confettiBurst();
+    setTimeout(confettiBurst, 400);
+  }
+
+  restartBtn.addEventListener('click', function(){
+    score = 0; misses = 0; catches = 0; dodgeCount = 0; won = false;
+    updateHUD();
+    winScreen.classList.remove('show');
+    spawnTarget();
+  });
+
+  spawnTarget();
+  updateHUD();
+  scheduleTv();
+  scheduleWind();
+})();
+</script>
+</body>
+</html>
